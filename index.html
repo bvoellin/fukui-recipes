@@ -2965,9 +2965,21 @@
       }
 
       try {
-        const fetchUrl = CLOUD_API_URL + (CLOUD_API_URL.includes('?') ? '&' : '?') + 'api=import&url=' + encodeURIComponent(url);
-        const response = await fetch(fetchUrl);
-        const res = await response.json();
+        let res;
+        if (rawInput.startsWith('http://') || rawInput.startsWith('https://')) {
+          const fetchUrl = CLOUD_API_URL + (CLOUD_API_URL.includes('?') ? '&' : '?') + 'api=import&url=' + encodeURIComponent(rawInput);
+          const response = await fetch(fetchUrl);
+          res = await response.json();
+        } else {
+          const postUrl = CLOUD_API_URL + (CLOUD_API_URL.includes('?') ? '&' : '?') + 'api=import';
+          const response = await fetch(postUrl, {
+            method: 'POST',
+            body: rawInput,
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+          });
+          res = await response.json();
+        }
+
         importUrlBtn.disabled = false;
         importUrlBtnText.textContent = 'Import';
         if (res && res.error) {
@@ -2976,12 +2988,12 @@
           populateModalWithExtractedRecipe(res.recipe, rawInput.startsWith('http') ? rawInput : '');
           setImportStatus('success', 'Recipe imported! Review and edit below, then tap Save.');
         } else {
-          setImportStatus('error', 'Could not extract recipe from that link.');
+          setImportStatus('error', 'Could not extract recipe from that link or text.');
         }
       } catch (err) {
         importUrlBtn.disabled = false;
         importUrlBtnText.textContent = 'Import';
-        setImportStatus('error', 'Open your live Apps Script web app to import from external URLs.');
+        setImportStatus('error', err && err.message ? err.message : 'Import failed. Check network or URL.');
       }
     }
 
